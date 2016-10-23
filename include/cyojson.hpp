@@ -1,3 +1,6 @@
+/*
+[CyoJSON] cyojson.hpp
+
 The MIT License (MIT)
 
 Copyright (c) 2016 Graham Bull
@@ -19,3 +22,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+*/
+
+#ifndef __CYOJSON_HPP
+#define __CYOJSON_HPP
+
+////////////////////////////////////////////////////////////////////////////////
+
+namespace cyojson
+{
+    class Parser
+    {
+    public:
+        class Callbacks
+        {
+        public:
+            virtual void Start(const char* name) = 0;
+            virtual void Value(const char* value) = 0;
+            virtual void End() = 0;
+        };
+
+        bool Parse(const char* json, Callbacks& callbacks);
+    };
+}
+
+#include "detail/cyojson.hpp"
+
+////////////////////////////////////////////////////////////////////////////////
+
+#endif //__CYOJSON_HPP
