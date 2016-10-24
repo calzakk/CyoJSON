@@ -37,12 +37,17 @@ namespace cyojson
         class Callbacks
         {
         public:
-            virtual void Start(const char* name) = 0;
-            virtual void Value(const char* value) = 0;
-            virtual void End() = 0;
+            virtual void Value(const char* path, const char* value) = 0;
         };
 
         bool Parse(const char* json, Callbacks& callbacks);
+
+        int getLine() const { return line_; }
+        int getColumn() const { return column_; }
+
+    private:
+        int line_ = 0;
+        int column_ = 0;
     };
 }
 

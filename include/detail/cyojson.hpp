@@ -51,30 +51,72 @@ namespace cyojson
 
             void operator=(const ParserImpl&) = delete;
 
-            bool Parse()
+            bool Parse(int& line, int& column)
             {
                 if (!ParseObject())
+                {
+                    line = line_;
+                    column = column_;
                     return false;
+                }
 
                 SkipWhitespace();
 
+                line = line_;
+                column = column_;
                 return (*next_ == '\0');
             }
 
         private:
+            const int c_firstLine = 1;
+            const int c_firstColumnOfLine = 1;
             const char* const c_true = "true";
             const char* const c_false = "false";
             const char* const c_null = "null";
 
+            void NextChar()
+            {
+                ++next_;
+                ++column_;
+            }
+
+            void NewLine()
+            {
+                column_ = c_firstColumnOfLine;
+                ++line_;
+            }
+
             void SkipWhitespace()
             {
-                while (std::isspace(*next_))
-                    ++next_;
+                while (*next_ != '\0')
+                {
+                    switch (*next_)
+                    {
+                    case '\r':
+                        if (*(next_ + 1) == '\n')
+                            next_ += 2;
+                        else
+                            ++next_;
+                        NewLine();
+                        continue;
+
+                    case '\n':
+                        ++next_;
+                        NewLine();
+                        continue;
+                    }
+
+                    if (std::isspace(*next_))
+                        NextChar();
+                    else
+                        break;
+                }
             }
 
             bool IsNext(char ch, bool skipWhitespace = true)
             {
                 assert(ch != '\0');
+                assert(!std::isspace(ch));
 
                 if (skipWhitespace)
                     SkipWhitespace();
@@ -82,13 +124,14 @@ namespace cyojson
                 if (*next_ != ch)
                     return false;
 
-                ++next_;
+                NextChar();
                 return true;
             }
 
             bool IsNext(char ch1, char ch2, bool skipWhitespace = true)
             {
                 assert(ch1 != '\0' && ch2 != '\0');
+                assert(!std::isspace(ch1) && !std::isspace(ch2));
 
                 if (skipWhitespace)
                     SkipWhitespace();
@@ -96,7 +139,7 @@ namespace cyojson
                 if (*next_ != ch1 && *next_ != ch2)
                     return false;
 
-                ++next_;
+                NextChar();
                 return true;
             }
 
@@ -133,7 +176,7 @@ namespace cyojson
                 const char* stringStart = next_;
 #if 1 //TEMP
                 while (*next_ != '\"') //TEMP
-                    ++next_; //TEMP
+                    NextChar(); //TEMP
 #else //TEMP
                 //TODO: handle unicode characters and control characters
 #endif //TEMP
@@ -160,13 +203,13 @@ namespace cyojson
                 if (!IsNext('0', false))
                 {
                     while (std::isdigit(*next_))
-                        ++next_;
+                        NextChar();
                 }
 
                 if (IsNext('.', false))
                 {
                     while (std::isdigit(*next_))
-                        ++next_;
+                        NextChar();
                 }
 
                 if (IsNext('e', 'E', false))
@@ -174,12 +217,14 @@ namespace cyojson
                     IsNext('+', '-', false);
 
                     while (std::isdigit(*next_))
-                        ++next_;
+                        NextChar();
                 }
 
                 const char* numberEnd = next_;
-                out = std::string(numberStart, numberEnd - numberStart);
+                if (numberStart == numberEnd)
+                    return false;
 
+                out = std::string(numberStart, numberEnd - numberStart);
                 return true;
             }
 
@@ -200,26 +245,26 @@ namespace cyojson
                     std::string str;
                     if (!ParseString(str))
                         return false;
-                    callbacks_.Value(str.c_str());
+                    callbacks_.Value(path_.c_str(), str.c_str());
                     return true;
                 }
 
                 case 't':
                     if (!IsNext(c_true))
                         return false;
-                    callbacks_.Value(c_true);
+                    callbacks_.Value(path_.c_str(), c_true);
                     return true;
 
                 case 'f':
                     if (!IsNext(c_false))
                         return false;
-                    callbacks_.Value(c_false);
+                    callbacks_.Value(path_.c_str(), c_false);
                     return true;
 
                 case 'n':
                     if (!IsNext(c_null))
                         return false;
-                    callbacks_.Value(c_null);
+                    callbacks_.Value(path_.c_str(), c_null);
                     return true;
 
                 default:
@@ -227,7 +272,7 @@ namespace cyojson
                     std::string num;
                     if (!ParseNumber(num))
                         return false;
-                    callbacks_.Value(num.c_str());
+                    callbacks_.Value(path_.c_str(), num.c_str());
                     return true;
                 }
                 }
@@ -268,7 +313,9 @@ namespace cyojson
                         std::string name;
                         if (!ParseString(name))
                             return false;
-                        callbacks_.Start(name.c_str());
+                        if (!path_.empty())
+                            path_ += ':';
+                        path_ += name;
 
                         if (!IsNext(':'))
                             return false;
@@ -276,7 +323,11 @@ namespace cyojson
                         if (!ParseValue())
                             return false;
 
-                        callbacks_.End();
+                        auto pos = path_.find_last_of(':');
+                        if (pos != path_.npos)
+                            path_.erase(pos);
+                        if (path_ == ":")
+                            path_.clear();
 
                         if (!IsNext(','))
                             break;
@@ -290,7 +341,10 @@ namespace cyojson
             }
 
         private:
+            int line_ = c_firstLine;
+            int column_ = c_firstColumnOfLine;
             const char* next_;
+            std::string path_;
             Parser::Callbacks& callbacks_;
         };
     }
@@ -300,6 +354,6 @@ namespace cyojson
         if (!json)
             return false;
 
-        return detail::ParserImpl(json, callbacks).Parse();
+        return detail::ParserImpl(json, callbacks).Parse(line_, column_);
     }
 }

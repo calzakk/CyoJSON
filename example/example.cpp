@@ -48,30 +48,13 @@ namespace
         OutputToStream(const OutputToStream&) = delete;
         void operator=(const OutputToStream&) = delete;
 
-        void Start(const char* name) override
+        void Value(const char* path, const char* value) override
         {
-            if (!path_.empty())
-                path_ += '/';
-            path_ += name;
-        }
-
-        void Value(const char* value) override
-        {
-            out_ << path_ << " = \"" << value << "\"\n";
-        }
-
-        void End() override
-        {
-            auto pos = path_.find_last_of('/');
-            if (pos != path_.npos)
-                path_.erase(pos);
-            if (path_ == "/")
-                path_.clear();
+            out_ << path << " = \"" << value << "\"\n";
         }
 
     private:
         std::ostream& out_;
-        std::string path_;
     };
 }
 
@@ -89,10 +72,16 @@ int main(int argc, char* argv[])
         char contents[8 * 1024] = { 0 };
         file.read(contents, sizeof(contents) - 1); //-1 for null termination
 
+        Parser parser;
         OutputToStream callbacks(std::cout);
-
-        bool success = Parser().Parse(contents, callbacks);
-        std::cout << (success ? "Success" : "Error") << std::endl;
+        bool success = parser.Parse(contents, callbacks);
+        if (success)
+            std::cout << "Success" << std::endl;
+        else
+        {
+            std::cout << "Error on line " << parser.getLine()
+                << " at column " << parser.getColumn() << std::endl;
+        }
 
         return 0;
     }
