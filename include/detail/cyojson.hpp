@@ -326,7 +326,7 @@ namespace cyojson
                         auto pos = path_.find_last_of(':');
                         if (pos != path_.npos)
                             path_.erase(pos);
-                        if (path_ == ":")
+                        else
                             path_.clear();
 
                         if (!IsNext(','))
