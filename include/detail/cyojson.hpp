@@ -283,6 +283,8 @@ namespace cyojson
                 if (!IsNext('['))
                     return false;
 
+                callbacks_.ArrayStart(path_.c_str());
+
                 if (!IsNext(']'))
                 {
                     for (;;)
@@ -298,6 +300,8 @@ namespace cyojson
                 if (!IsNext(']'))
                     return false;
 
+                callbacks_.ArrayEnd(path_.c_str());
+
                 return true;
             }
 
@@ -305,6 +309,8 @@ namespace cyojson
             {
                 if (!IsNext('{'))
                     return false;
+
+                callbacks_.ObjectStart(path_.c_str());
 
                 if (!IsNext('}'))
                 {
@@ -336,6 +342,8 @@ namespace cyojson
 
                 if (!IsNext('}'))
                     return false;
+
+                callbacks_.ObjectEnd(path_.c_str());
 
                 return true;
             }
