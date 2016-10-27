@@ -357,7 +357,7 @@ namespace cyojson
         };
     }
 
-    bool Parser::Parse(const char* json, Callbacks& callbacks)
+    inline bool Parser::Parse(const char* json, Callbacks& callbacks)
     {
         if (!json)
             return false;
