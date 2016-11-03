@@ -1,5 +1,5 @@
 /*
-[CyoJSON] detail/cyojson.hpp
+[CyoJSON] detail/parser.hpp
 
 The MIT License (MIT)
 
@@ -28,8 +28,11 @@ SOFTWARE.
 #   error Do not #include this file!
 #endif
 
+#include "utf8.hpp"
+
 #include <cassert>
 #include <cctype>
+#include <cstdint>
 #include <string>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -73,6 +76,12 @@ namespace cyojson
             const char* const c_true = "true";
             const char* const c_false = "false";
             const char* const c_null = "null";
+
+            int line_ = c_firstLine;
+            int column_ = c_firstColumnOfLine;
+            const char* next_;
+            std::string path_;
+            Parser::Callbacks& callbacks_;
 
             void NextChar()
             {
@@ -173,16 +182,34 @@ namespace cyojson
                 if (!IsNext('\"'))
                     return false;
 
-                const char* stringStart = next_;
-#if 1 //TEMP
-                while (*next_ != '\"') //TEMP
-                    NextChar(); //TEMP
-#else //TEMP
-                //TODO: handle unicode characters and control characters
-#endif //TEMP
+                for (;;)
+                {
+                    char ch = *next_;
+                    if (ch == '\"')
+                        break;
 
-                const char* stringEnd = next_;
-                out = std::string(stringStart, stringEnd - stringStart);
+                    NextChar();
+
+                    if (ch != '\\')
+                    {
+                        out += ch;
+                        continue;
+                    }
+
+                    if (*next_ == 'u')
+                    {
+                        if (!ParseUnicode(out))
+                            return false;
+                        else
+                            continue;
+                    }
+
+                    const char* const escapes = "\"\"\\\\//b\bf\fn\nr\rt\t";
+                    const char* escape = std::strchr(escapes, *next_);
+                    if (escape == nullptr)
+                        return false;
+                    out += *(escape + 1);
+                }
 
                 if (!IsNext('\"'))
                     return false;
@@ -285,16 +312,13 @@ namespace cyojson
 
                 callbacks_.ArrayStart(path_.c_str());
 
-                if (!IsNext(']'))
+                for (;;)
                 {
-                    for (;;)
-                    {
-                        if (!ParseValue())
-                            return false;
+                    if (!ParseValue())
+                        break;
 
-                        if (!IsNext(','))
-                            break;
-                    }
+                    if (!IsNext(','))
+                        break;
                 }
 
                 if (!IsNext(']'))
@@ -312,32 +336,29 @@ namespace cyojson
 
                 callbacks_.ObjectStart(path_.c_str());
 
-                if (!IsNext('}'))
+                for (;;)
                 {
-                    for (;;)
-                    {
-                        std::string name;
-                        if (!ParseString(name))
-                            return false;
-                        if (!path_.empty())
-                            path_ += ':';
-                        path_ += name;
+                    std::string name;
+                    if (!ParseString(name))
+                        break;
+                    if (!path_.empty())
+                        path_ += ':';
+                    path_ += name;
 
-                        if (!IsNext(':'))
-                            return false;
+                    if (!IsNext(':'))
+                        break;
 
-                        if (!ParseValue())
-                            return false;
+                    if (!ParseValue())
+                        break;
 
-                        auto pos = path_.find_last_of(':');
-                        if (pos != path_.npos)
-                            path_.erase(pos);
-                        else
-                            path_.clear();
+                    auto pos = path_.find_last_of(':');
+                    if (pos != path_.npos)
+                        path_.erase(pos);
+                    else
+                        path_.clear();
 
-                        if (!IsNext(','))
-                            break;
-                    }
+                    if (!IsNext(','))
+                        break;
                 }
 
                 if (!IsNext('}'))
@@ -348,12 +369,65 @@ namespace cyojson
                 return true;
             }
 
-        private:
-            int line_ = c_firstLine;
-            int column_ = c_firstColumnOfLine;
-            const char* next_;
-            std::string path_;
-            Parser::Callbacks& callbacks_;
+            bool ParseUnicode(std::string& out)
+            {
+                NextChar(); //u
+
+                // Parse first (or only) char...
+
+                std::uint16_t value;
+                if (!ParseUnicodeChar(value))
+                    return false;
+
+                if (value < 0xD800 || value >= 0xE000)
+                {
+                    OutputUTF8(out, value);
+                    return true;
+                }
+
+                std::uint16_t highSurrogate = value;
+                if (highSurrogate >= 0xDC00)
+                    return false; //invalid high surrogate
+
+                assert(0xD800 <= highSurrogate && highSurrogate <= 0xDBFF);
+
+                // Parse second char...
+
+                if (!IsNext('\\'))
+                    return false;
+                if (!IsNext('u'))
+                    return false;
+
+                std::uint16_t lowSurrogate;
+                if (!ParseUnicodeChar(lowSurrogate))
+                    return false;
+
+                assert(0xDC00 <= lowSurrogate && lowSurrogate <= 0xDFFF);
+
+                OutputUTF8(out, highSurrogate, lowSurrogate);
+                return true;
+            }
+
+            bool ParseUnicodeChar(std::uint16_t& value)
+            {
+                value = 0;
+                for (int i = 0; i < 4; ++i)
+                {
+                    std::uint16_t curr;
+                    if ('a' <= *next_ && *next_ <= 'z')
+                        curr = ((*next_ - 'a') + 10);
+                    else if ('A' <= *next_ && *next_ <= 'Z')
+                        curr = ((*next_ - 'A') + 10);
+                    else if ('0' <= *next_ && *next_ <= '9')
+                        curr = (*next_ - '0');
+                    else
+                        return false;
+                    value <<= 4;
+                    value |= curr;
+                    NextChar();
+                }
+                return true;
+            }
         };
     }
 
