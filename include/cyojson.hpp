@@ -29,10 +29,6 @@ SOFTWARE.
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UNREFERENCED_PARAMETER
-#   define UNREFERENCED_PARAMETER(p) (void)(p)
-#endif
-
 namespace cyojson
 {
     class Parser
@@ -58,14 +54,14 @@ namespace cyojson
         int column_ = 0;
     };
 
-    inline void Parser::Callbacks::ObjectStart(const char* path) { UNREFERENCED_PARAMETER(path); }
-    inline void Parser::Callbacks::ObjectEnd(const char* path) { UNREFERENCED_PARAMETER(path); }
-    inline void Parser::Callbacks::ArrayStart(const char* path) { UNREFERENCED_PARAMETER(path); }
-    inline void Parser::Callbacks::ArrayEnd(const char* path) { UNREFERENCED_PARAMETER(path); }
-    inline void Parser::Callbacks::Value(const char* path, const char* value) { UNREFERENCED_PARAMETER(path); UNREFERENCED_PARAMETER(value); }
+    inline void Parser::Callbacks::ObjectStart(const char*) { }
+    inline void Parser::Callbacks::ObjectEnd(const char*) { }
+    inline void Parser::Callbacks::ArrayStart(const char*) { }
+    inline void Parser::Callbacks::ArrayEnd(const char*) { }
+    inline void Parser::Callbacks::Value(const char*, const char*) { }
 }
 
-#include "detail/cyojson.hpp"
+#include "detail/parser.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 
