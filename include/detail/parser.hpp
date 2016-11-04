@@ -33,6 +33,7 @@ SOFTWARE.
 #include <cassert>
 #include <cctype>
 #include <cstdint>
+#include <cstring>
 #include <string>
 
 ////////////////////////////////////////////////////////////////////////////////
