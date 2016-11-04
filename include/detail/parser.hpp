@@ -442,6 +442,6 @@ namespace cyojson
             return false;
 
         detail::ParserImpl impl(json, callbacks);
-        impl.Parse(line_, column_);
+        return impl.Parse(line_, column_);
     }
 }
