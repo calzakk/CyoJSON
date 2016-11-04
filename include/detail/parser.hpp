@@ -89,6 +89,12 @@ namespace cyojson
                 ++column_;
             }
 
+            void NextChars(int count)
+            {
+                next_ += count;
+                column_ += count;
+            }
+
             void NewLine()
             {
                 column_ = c_firstColumnOfLine;
@@ -166,12 +172,10 @@ namespace cyojson
                     ++next;
                     ++nextStr;
                 }
-
                 if (*nextStr)
                     return false;
 
-                next_ += (nextStr - str);
-
+                NextChars((int)(nextStr - str));
                 return true;
             }
 
@@ -209,6 +213,7 @@ namespace cyojson
                     if (escape == nullptr)
                         return false;
                     out += *(escape + 1);
+                    NextChar();
                 }
 
                 if (!IsNext('\"'))
@@ -436,6 +441,7 @@ namespace cyojson
         if (!json)
             return false;
 
-        return detail::ParserImpl(json, callbacks).Parse(line_, column_);
+        detail::ParserImpl impl(json, callbacks);
+        impl.Parse(line_, column_);
     }
 }
