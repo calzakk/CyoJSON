@@ -56,7 +56,7 @@ Unit tests coming soon!
 
 ## Platforms
 
-CyoArguments requires a C++11 compiler, and is known to build on the following platforms:
+CyoJSON requires a C++11 compiler, and is known to build on the following platforms:
 
 * Linux using GCC 5.4;
 * Windows using Visual Studio 2013.
