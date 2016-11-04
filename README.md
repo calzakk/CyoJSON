@@ -1,6 +1,65 @@
 # CyoJSON
 
-Documentation to follow!
+CyoJSON is an easy-to-use C++ library for parsing JSON-formatted text.
+
+## Features
+
+* Simple interface.
+* Stream-based parsing.
+* Invokes callback functions during parsing - object starts/ends, array starts/ends, values.
+* Implemented using header files only;
+* Uses modern C++.
+
+## Usage
+
+CyoJSON is implemented using header files only, so doesn't need to be separately built prior to use. One header provides the interface, and several headers (in the 'details' subdirectory) provide implementation details that are only indirectly #included.
+
+    #include "cyojson.hpp"
+    using namespace cyojson;
+
+### Parser::Callbacks class
+
+Define and instantiate a class that derives from Parser::Callbacks:
+
+    class Callbacks final : public Parser::Callbacks
+    {
+    public:
+        void Value(const char* path, const char* value) override
+        {
+            std::cout << path << " = \"" << value << "\"" << std::endl;
+        }
+    };
+
+    Callbacks callbacks;
+
+### Parser class
+
+Now instantiate the Parser class:
+
+    Parser parser;
+
+Pass the JSON text (char*, encoded using UTF-8) and the callbacks:
+
+    bool success = parser.Parse(json, callbacks);
+
+Check for errors:
+
+    if (!success)
+    {
+        std::cout << "Error on line " << parser.getLine()
+            << " at column " << parser.getColumn() << std::endl;
+    }
+
+## Tests
+
+Unit tests coming soon!
+
+## Platforms
+
+CyoArguments requires a C++11 compiler, and is known to build on the following platforms:
+
+* Linux using GCC 5.4;
+* Windows using Visual Studio 2013.
 
 ## License
 
